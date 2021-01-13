@@ -17,7 +17,9 @@ def getMultipleSKU(filePaths, startIndex = 0,numberToOpen = 50):
 
     sku = []
     for path in filePaths[startIndex:(startIndex+numberToOpen)]:
-        if str(path)[0:9] == "LISTING/~":
+        if str(path)[0:9] == "LISTING/~" or str(path)[0:21] == "LISTING/NewListings/~":
+            continue
+        if str(path) == "LISTING/NewListings/masterList.xlsx" or str(path) == "LISTING/NewListings/Master_List_With_ASIN.xlsx":
             continue
         print(f'working on {path}')
         wb = openpyxl.load_workbook(path,read_only=True)
@@ -26,7 +28,7 @@ def getMultipleSKU(filePaths, startIndex = 0,numberToOpen = 50):
 
         for skuNumber in skuList:
             if(skuNumber is not None):
-                sku.append((skuNumber,str(path)))
+                sku.append((skuNumber[0],str(path),skuNumber[1],skuNumber[2]))
         wb.close()
     print(sku)
     return sku
@@ -50,11 +52,12 @@ def getSKUFromSheet(wb):
     highest_row = style_sheet.max_row
     values = []
     for row in range(1,4):
-        for col in range(1,5):
+        for col in range(1,6):
             if style_sheet.cell(row,col).value == "item_sku":
                 #SKUList = getValueColumn(style_sheet,row,col,max)
                 for counter in range(4,highest_row+1):
-                    SKUList.append(style_sheet.cell(counter,col).value)
+                    SKUList.append([style_sheet.cell(counter,col).value, counter, col])
+                break
 
     return SKUList
 
@@ -68,9 +71,11 @@ def getValueColumn(style_sheet, row, col, max):
 def inputToMaster(ms,skuList):
     #wb = openpyxl.load_workbook(master_sheet)
     for count,x in enumerate(skuList):
-        inputRow = ms['SKU'].max_row+1
-        ms['SKU'].cell(inputRow, 1).value = x[0]
-        ms['SKU'].cell(inputRow, 3).value = x[1]
+        inputRow = ms[ms.sheetnames[0]].max_row+1
+        ms[ms.sheetnames[0]].cell(inputRow, 1).value = x[0]
+        ms[ms.sheetnames[0]].cell(inputRow, 3).value = x[1]
+        ms[ms.sheetnames[0]].cell(inputRow, 4).value = x[2]
+        ms[ms.sheetnames[0]].cell(inputRow, 5).value = x[3]
         print(f"writing progress {count}/{len(skuList)}")
     #wb.save('masterList.xlsx')
     #wb.close()
@@ -79,7 +84,7 @@ def inputToMaster(ms,skuList):
 if __name__ == "__main__":
     print('hi')
     skuSheet = []
-    ms = openpyxl.load_workbook(master_sheet)
+    ms = openpyxl.Workbook()
     for x in range(int(len(xlsx_files)/50)+1):
         print(f'working on {x+1}/{int(len(xlsx_files)/50+1)}')
         skuSheet = getMultipleSKU(xlsx_files, x*50)
